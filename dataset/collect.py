@@ -20,10 +20,13 @@ can build the dataset incrementally across many sessions.
 import argparse
 import asyncio
 import csv
+from fileinput import filename
 import hashlib
+import html
 import sys
 from pathlib import Path
 from urllib.parse import urlparse
+
 
 # --- reuse the project's own fetcher instead of a bare `requests.get` -----
 # This keeps behavior (headers, timeouts, retries) identical to what the
@@ -74,10 +77,19 @@ async def collect_one(url: str, label: str, domain_override: str | None,
         return f"FAIL  (empty/too short) {url}"
 
     filename = slugify_filename(url)
-    (RAW_DIR / filename).write_text(html, encoding="utf-8")
+
+    label_dir = RAW_DIR / label
+    label_dir.mkdir(parents=True, exist_ok=True)
+
+    (label_dir / filename).write_text(html, encoding="utf-8")
 
     domain = domain_override or urlparse(url).netloc
-    append_row({"filename": filename, "url": url, "label": label, "domain": domain})
+    append_row({
+    "filename": filename,
+    "url": url,
+    "label": label,
+    "domain": domain
+})
     seen.add(url)
     return f"OK    [{label:10s}] {url}"
 

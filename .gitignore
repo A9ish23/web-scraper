@@ -1,7 +1,31 @@
-venv/
-.venv/
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables
 .env
-dataset/raw/*.html
-ml/model/*.joblib
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Python tooling
+.pytest_cache/
+.mypy_cache/
+
+# Dataset
+dataset/raw/
+dataset/processed/
+
+# Jupyter
+.ipynb_checkpoints/
