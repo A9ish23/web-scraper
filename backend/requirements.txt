@@ -3,3 +3,12 @@ uvicorn[standard]
 httpx
 beautifulsoup4
 lxml
+aiosqlite
+pydantic-settings
+pyyaml
+websockets
+pytest
+pytest-asyncio
+scikit-learn
+joblib
+sentence-transformers

@@ -27,5 +27,10 @@ Thumbs.db
 dataset/raw/
 dataset/processed/
 
+# Runtime data
+backend/data/*.db
+backend/data/*.db-*
+backend/data/*.log
+
 # Jupyter
 .ipynb_checkpoints/

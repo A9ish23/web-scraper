@@ -14,7 +14,6 @@ Why two parts?
 The classifier will combine them: TF-IDF(text) + scaled numeric features.
 """
 
-import copy
 import json
 import re
 from urllib.parse import urlparse, parse_qs
@@ -80,12 +79,21 @@ MAX_BODY_CHARS = 3000  # how much body text we feed to TF-IDF
 # --------------------------------------------------------------------------
 
 def _visible_text(soup: BeautifulSoup) -> str:
-    """Page text without scripts/styles. Works on a copy (no mutation)."""
-    clone = copy.copy(soup)
-    for tag in clone(["script", "style", "noscript", "template"]):
-        tag.decompose()
+    """Visible text from the semantic content area with interface noise removed."""
+    clone = _content_soup(soup)
     text = clone.get_text(" ", strip=True)
     return re.sub(r"\s+", " ", text)
+
+
+def _content_soup(soup: BeautifulSoup) -> BeautifulSoup:
+    clone = BeautifulSoup(str(soup.find("main") or soup.find("article") or soup.body or soup), "lxml")
+    for tag in clone.find_all(["script", "style", "noscript", "template", "nav", "footer", "form", "iframe"]):
+        tag.decompose()
+    for tag in list(clone.find_all(True)):
+        marker = " ".join([str(tag.get("id", "")), " ".join(tag.get("class", [])), str(tag.get("role", ""))])
+        if re.search(r"\b(navigation|menu|sidebar|cookie|consent|popup|modal|breadcrumb|social|share|advert|promo|related|recommend|subscribe)\b", marker, re.I):
+            tag.decompose()
+    return clone
 
 
 def _jsonld_types(soup: BeautifulSoup) -> set[str]:
@@ -138,11 +146,12 @@ def _structure_features(soup: BeautifulSoup) -> dict[str, float]:
 
 def _text_features(soup: BeautifulSoup, text: str) -> dict[str, float]:
     text_len = len(text)
-    paragraphs = [p.get_text(" ", strip=True) for p in soup.find_all("p")]
+    content = _content_soup(soup)
+    paragraphs = [p.get_text(" ", strip=True) for p in content.find_all("p")]
     long_paragraphs = [p for p in paragraphs if len(p) > 100]
-    anchor_chars = sum(len(a.get_text(" ", strip=True)) for a in soup.find_all("a"))
-    n_img = len(soup.find_all("img"))
-    n_tags = max(len(soup.find_all(True)), 1)
+    anchor_chars = sum(len(a.get_text(" ", strip=True)) for a in content.find_all("a"))
+    n_img = len(content.find_all("img"))
+    n_tags = max(len(content.find_all(True)), 1)
 
     return {
         "text_length": float(text_len),
@@ -213,8 +222,9 @@ def _build_text_blob(soup: BeautifulSoup, url: str, text: str) -> str:
     title = soup.title.get_text(strip=True) if soup.title else ""
     description = _meta_content(soup, name="description")
     og_type = _meta_content(soup, property="og:type")
+    content = _content_soup(soup)
     headings = " ".join(
-        h.get_text(" ", strip=True) for h in soup.find_all(["h1", "h2", "h3"])
+        h.get_text(" ", strip=True) for h in content.find_all(["h1", "h2", "h3"])
     )
     url_tokens = " ".join(re.split(r"[^a-zA-Z]+", urlparse(url).path))
     parts = [title, description, og_type, headings, url_tokens, text[:MAX_BODY_CHARS]]
